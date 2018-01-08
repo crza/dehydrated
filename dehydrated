@@ -277,7 +277,7 @@ init_system() {
     CA_REVOKE_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value revokeCert)" ||
     _exiterr "Problem retrieving ACME/CA-URLs, check if your configured CA points to the directory entrypoint."
     [[ -z "${CA_NEW_AUTHZ}" ]] && CA_NEW_AUTHZ="${CA/directory/'acme/new-authz'}"
-    [[ -z "${CA_ACCOUNT}" ]] && CA_ACCOUNT="${CA/directory/'acme/acct'}"
+    CA_ACCOUNT="${CA/directory/'acme/acct'}"
   fi
 
   # Export some environment variables to be used in hook script
@@ -624,7 +624,7 @@ sign_csr() {
     challenge_identifiers="[${challenge_identifiers%, }]"
 
     echo " + Requesting challenges for ${altnames}..."
-    result="$(signed_request "${CA_NEW_ORDER}" '{"identifiers": '"${challenge_identifiers}"'}' | clean_json)"
+    result="$(signed_request "${CA_NEW_ORDER}" '{"identifiers": '"${challenge_identifiers}"'}')"
 
     authorizations="$(echo ${result} | get_json_array_value authorizations)"
     finalize="$(echo ${result} | get_json_string_value finalize)"
