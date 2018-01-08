@@ -525,8 +525,8 @@ signed_request() {
     protected64="$(printf '%s' "${protected}" | urlbase64)"
   else
     # Build another header which also contains the previously received nonce and url and encode it as urlbase64
-    if [[ -e "${ACCOUNT_KEY_JSON}" ]] && [[ -n "$(cat ${ACCOUNT_KEY_JSON} | get_json_int_value id)" ]]; then
-      REG_ID="$(<<< ${ACCOUNT_KEY_JSON} | get_json_int_value id)"
+    if [[ -e "${ACCOUNT_KEY_JSON}" ]] && [[ -n "$( <<<"${ACCOUNT_KEY_JSON}" get_json_int_value id)" ]]; then
+      REG_ID="$( <<<"${ACCOUNT_KEY_JSON}" get_json_int_value id)"
       protected='{"alg": "RS256", "kid": "'"${CA_ACCOUNT}/${REG_ID}"'", "url": "'"${1}"'", "nonce": "'"${nonce}"'"}'
     else
       protected='{"alg": "RS256", "jwk": {"e": "'"${pubExponent64}"'", "kty": "RSA", "n": "'"${pubMod64}"'"}, "url": "'"${1}"'", "nonce": "'"${nonce}"'"}'
@@ -620,16 +620,16 @@ sign_csr() {
     echo " + Requesting challenges for ${altnames}..."
     result="$(signed_request "${CA_NEW_ORDER}" '{"identifiers": '"${challenge_identifiers}"'}')"
 
-    authorizations="$(echo ${result} | get_json_array_value authorizations)"
-    finalize="$(echo ${result} | get_json_string_value finalize)"
+    authorizations="$(echo "${result}" | get_json_array_value authorizations)"
+    finalize="$(echo "${result}" | get_json_string_value finalize)"
 
     local idx=0
     for uris in ${authorizations}; do
-      authorization[${idx}]=${uris}
+      authorization[${idx}]="${uris}"
       idx=$((idx+1))
     done
 
-    unset challenge_identifiers
+    unset challenge_identifiers authorizations
   fi
 
   local idx=0; idy=-1
@@ -641,8 +641,8 @@ sign_csr() {
       echo " + Requesting challenge for ${altname}..."
       response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
     else
-      uris=$(<<< ${authorization[${idy}]} _sed -e 's/\"(.*)".*/\1/')
-      response="$(http_request get ${uris} | clean_json)"
+      uris="$( <<<"${authorization[${idy}]}" _sed -e 's/\"(.*)".*/\1/')"
+      response="$(http_request get "${uris}" | clean_json)"
     fi
 
     challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
@@ -770,6 +770,7 @@ sign_csr() {
   csr64="$( <<<"${csr}" "${OPENSSL}" req -config "${OPENSSL_CNF}" -outform DER | urlbase64)"
   if [[ ${API} -eq 1 ]]; then
     crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | "${OPENSSL}" base64 -e)"
+    crt="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
   else
     result="$(signed_request "${finalize}" '{"csr": "'"${csr64}"'"}' | clean_json | get_json_string_value certificate)"
     crt="$(http_request get "${result}")"
