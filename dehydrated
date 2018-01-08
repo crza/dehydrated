@@ -638,15 +638,16 @@ sign_csr() {
     unset challenge_identifiers
   fi
 
-  local idx=0
+  local idx=0, idy=-1
   # Request challenges
   for altname in ${altnames}; do
+    idy=$((idy+1))
     if [[ ${API} = 1 ]]; then
       # Ask the acme-server for new challenge token and extract them from the resulting json block
       echo " + Requesting challenge for ${altname}..."
       response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
     else
-      uris=$(<<< ${authorization[${idx}]} _sed -e 's/\"(.*)".*/\1/')
+      uris=$(<<< ${authorization[${idy}]} _sed -e 's/\"(.*)".*/\1/')
       response="$(http_request get ${uris} | clean_json)"
     fi
 
